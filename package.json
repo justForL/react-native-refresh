@@ -1,0 +1,22 @@
+{
+    "license": "MIT", 
+    "name": "@kk/react-native-refresh", 
+    "repository": {
+        "url": "http://gitlab.shenmajr.com/shenma-app-rn-common/react-native-shenma-refresh.git", 
+        "type": "git"
+    }, 
+    "author": "wangtieshan", 
+    "version": "1.0.0", 
+    "dependencies": {
+        "prop-types": "latest"
+    }, 
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    }, 
+    "keywords": [
+        "shenma", 
+        "refresh"
+    ], 
+    "main": "index.js", 
+    "description": "refresh"
+}
