@@ -6,8 +6,12 @@ import PropTypes from 'prop-types';
 import {
     View,
     Text,
-    SectionList,
+    SectionList, Vibration,
 } from 'react-native';
+
+import SMEmptyView from "./SMEmptyView";
+
+import {vibrate} from '@shenmajr/shenmajr-react-native-systemapi';
 
 export default class SMRefreshSectionList extends Component {
 
@@ -27,9 +31,37 @@ export default class SMRefreshSectionList extends Component {
         onLoading: PropTypes.func,
         /// 刷新配置
         refresh: PropTypes.object,
+
+        /// 空视图
+        emptyView: PropTypes.element,
+        /// 空视图默认视图
+        emptyDefaultView: PropTypes.shape({
+            /// 样式
+            style: PropTypes.object,
+            /// 空视图图片
+            emptyImage: PropTypes.any,
+            /// 空视图标题
+            emptyTitle: PropTypes.shape({
+                title: PropTypes.string,
+                titleStyle: PropTypes.object,
+            }),
+            /// 空视图副标题
+            emptySubTitle: PropTypes.shape({
+                title: PropTypes.string,
+                titleStyle: PropTypes.object,
+            }),
+            /// 空视图按钮
+            emptyButton: PropTypes.shape({
+                style: PropTypes.object,
+                title: PropTypes.string,
+                titleStyle: PropTypes.object,
+            })
+        })
     };
 
-    loading: boolean = false;
+    loadingLock: boolean = false;
+
+    lastLoadingTime: number;
 
     constructor(props) {
         super(props);
@@ -93,24 +125,34 @@ export default class SMRefreshSectionList extends Component {
         }
         /// 通过 state.loading 不保险，有时间差
         /// 需要瞬间锁掉
-        if (this.loading) {
+        if (this.loadingLock) {
             return;
         }
-        this.loading = true;
+        this.loadingLock = true;
         let refresh = this.state.refresh;
         refresh.loading = true;
         this.setState({
             refresh: refresh,
         });
         if (this.props.onLoading) {
+            this.lastLoadingTime = (new Date()).getTime();
+            vibrate('light');
             this.props.onLoading(()=>{
                 let refresh = this.state.refresh;
                 refresh.loading = false;
                 this.setState({
                     refresh: refresh,
                 }, ()=>{
+                    let now = (new Date()).getTime();
+                    if ((now - this.lastLoadingTime) < 2000) {
+                        let timer = setTimeout(()=>{
+                            clearTimeout(timer);
+                            this.loadingLock = false;
+                        }, 2000 - (now - this.lastLoadingTime));
+                        return;
+                    }
                     /// 当回调完成时才会解锁
-                    this.loading = false;
+                    this.loadingLock = false;
                 });
             })
         }
@@ -155,8 +197,8 @@ export default class SMRefreshSectionList extends Component {
     }
 
     _dataCount() {
-        if (this.props.data && this.props.data.length) {
-            return this.props.data.length;
+        if (this.props.sections && this.props.sections.length) {
+            return this.props.sections.length;
         }
         return 0;
     }
@@ -176,13 +218,35 @@ export default class SMRefreshSectionList extends Component {
                       ListFooterComponent={
                           <View style={{alignItems: 'stretch',}}>
                               {this.props.ListFooterComponent}
-                              <View style={{height: this._footHeight(), alignItems: 'center', justifyContent: 'center', overflow: 'hidden',}}>
-                                  <Text>{this._footTitle()}</Text>
-                              </View>
+                              {this._footer()}
                           </View>
                       }
             />
         )
     }
 
+    /// 足部
+    _footer() {
+        let count = this._dataCount();
+        if (count === 0) {
+            if (this.props.hasOwnProperty('emptyView')) {
+                return this.props.emptyView;
+            } else if (this.props.hasOwnProperty('emptyDefaultView')) {
+                return <SMEmptyView {...this.props.emptyDefaultView} style={[{}, this.props.emptyDefaultView.style]}/>
+            }
+            return this._loadMoreView()
+        } else {
+            return this._loadMoreView();
+        }
+    }
+
+    _loadMoreView() {
+        let height = this._footHeight();
+        if (height === 0) {
+            return <View/>
+        }
+        return <View style={{height: height, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', }}>
+            <Text>{this._footTitle()}</Text>
+        </View>
+    }
 }
